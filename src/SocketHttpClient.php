@@ -16,7 +16,7 @@ class SocketHttpClient implements HttpClient
         'timeout'       => null
     ];
 
-    public function __construct($config = array())
+    public function __construct(array $config = [])
     {
         $this->config = $this->configure($config);
     }
@@ -47,7 +47,14 @@ class SocketHttpClient implements HttpClient
         // TODO: Implement sendRequests() method.
     }
 
-    protected function configure($config)
+    /**
+     * Return configuration for the socket adapter
+     *
+     * @param array $config Configuration from user
+     *
+     * @return array Configuration resolved
+     */
+    protected function configure(array $config = [])
     {
         $resolver = new OptionsResolver();
         $resolver->setDefaults($this->config);
