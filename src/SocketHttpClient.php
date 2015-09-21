@@ -5,18 +5,20 @@ namespace Http\Socket;
 use Http\Client\HttpClient;
 use Http\Client\HttpMethods;
 use Psr\Http\Message\RequestInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class SocketHttpClient implements HttpClient
 {
     use HttpMethods;
 
-    private $remoteSocket = null;
+    private $config = [
+        'remote_socket' => null,
+        'timeout'       => null
+    ];
 
-    private $timeout;it in
-
-    public function __construct()
+    public function __construct($config = array())
     {
-
+        $this->config = $this->configure($config);
     }
 
     /**
@@ -34,7 +36,7 @@ class SocketHttpClient implements HttpClient
      */
     public function sendRequest(RequestInterface $request, array $options = [])
     {
-        // TODO: Implement sendRequest() method.
+        $options = isset($options['socket-adapater']) ? $this->configure($options['socket-adapter']) : $this->config;
     }
 
     /**
@@ -43,6 +45,14 @@ class SocketHttpClient implements HttpClient
     public function sendRequests(array $requests, array $options = [])
     {
         // TODO: Implement sendRequests() method.
+    }
+
+    protected function configure($config)
+    {
+        $resolver = new OptionsResolver();
+        $resolver->setDefaults($this->config);
+
+        return $resolver->resolve($config);
     }
 }
  
