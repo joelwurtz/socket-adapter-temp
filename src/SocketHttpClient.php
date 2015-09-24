@@ -12,6 +12,8 @@ use Psr\Http\Message\RequestInterface;
 
 use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Zend\Diactoros\Request;
+use Zend\Diactoros\Stream;
 
 class SocketHttpClient implements HttpClient
 {
@@ -38,9 +40,14 @@ class SocketHttpClient implements HttpClient
      */
     public function send($method, $uri, array $headers = [], $body = null, array $options = [])
     {
-        // Create request
+        if (null === $body) {
+            $body = new Stream('php://memory');
+        }
 
+        // Create request
+        $request = new Request($uri, $method, $body, $headers);
         // Send request
+        return $this->sendRequest($request, $options);
     }
 
     /**
@@ -56,9 +63,16 @@ class SocketHttpClient implements HttpClient
 
         $socket = $this->createSocket($request, $options);
 
-        $this->writeRequest($socket, $request, $options);
+        try {
+            $this->writeRequest($socket, $request, $options);
+            $response = $this->readResponse($socket, $options);
+        } catch (\Exception $e) {
+            $this->closeSocket($socket);
 
-        return $this->readResponse($socket, $options);
+            throw $e;
+        }
+
+        return $response;
     }
 
     /**
@@ -112,6 +126,11 @@ class SocketHttpClient implements HttpClient
         }
 
         return $socket;
+    }
+
+    protected function closeSocket($socket)
+    {
+        fclose($socket);
     }
 
     /**

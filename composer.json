@@ -11,7 +11,8 @@
     },
     "autoload": {
         "psr-4": {
-            "Http\\Socket\\": "src/"
+            "Http\\Socket\\": "src/",
+            "Http\\Socket\\Tests\\": "tests/"
         }
     },
     "license": "MIT",
