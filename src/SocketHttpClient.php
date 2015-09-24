@@ -120,7 +120,7 @@ class SocketHttpClient implements HttpClient
         }
 
         if ($options['ssl']) {
-            if (false === stream_socket_enable_crypto($socket, true, $options['ssl_method'])) {
+            if (false === @stream_socket_enable_crypto($socket, true, $options['ssl_method'])) {
                 throw new NetworkException(sprintf('Cannot enable tls: %s', error_get_last()['message']), $request);
             }
         }
