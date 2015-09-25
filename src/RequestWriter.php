@@ -3,19 +3,61 @@
 namespace Http\Socket;
 
 use Http\Client\Exception\NetworkException;
+use Http\Client\Exception\RequestException;
 use Psr\Http\Message\RequestInterface;
 
 trait RequestWriter
 {
+    protected $filterEncodingMapping = [
+        'chunked'  => 'chunk',
+        // No encoding
+        'identity' => '',
+        // LZ77 Compression no support in standard php library
+        'gzip'     => null,
+        // LZW Compression no support in standard php library
+        'compress' => null,
+        // Deflate RFC 1950 Supported by the zlib extension in PHP
+        'deflate'  => 'zlib.deflate'
+    ];
+
     /**
+     * Sanitize header of request to make them consistent
+     *
      * @param RequestInterface $request
      * @param array $options
      *
+     * @throws \Http\Client\Exception\RequestException
      *
+     * @return RequestInterface
      */
     protected function sanitizeRequest(RequestInterface $request, array $options)
     {
+        // Deal with body length / chunked
+        if ($request->getBody()->getSize() != null) {
+            $request = $request->withHeader('Content-Length', $request->getBody()->getSize());
+        }
 
+        if (!$request->getBody()->isReadable()) {
+            $request = $request->withHeader('Content-Length', 0);
+        }
+
+        if (!$request->hasHeader('Content-Length')) {
+            if ($request->getProtocolVersion() == '1.0') {
+                throw new RequestException('HTTP 1.0 Need to have a content length header for sending body, and no size can be found for the body', $request);
+            }
+
+            $values = ["chunked"];
+
+            if ($request->hasHeader('Transfer-encoding')) {
+                $values = array_merge($values, $request->getHeader('Transfer-encoding'));
+                $values = array_map('strtolower', $values);
+                $values = array_unique($values);
+            }
+
+            $request = $request->withHeader('Transfer-encoding', $values);
+        }
+
+        return $request;
     }
 
     /**
@@ -34,9 +76,65 @@ trait RequestWriter
         }
 
         if ($request->getBody()->isReadable()) {
+            $this->writeBody($socket, $request, $options);
+
             if (false === $this->fwrite($socket, $request->getBody()->getContents())) {
                 throw new NetworkException("Failed to send body of the request, underlying socket not accessible, (BROKEN EPIPE)", $request);
             }
+        }
+    }
+
+    /**
+     * Write Body of the request
+     *
+     * @param resource         $socket
+     * @param RequestInterface $request
+     * @param array            $options
+     *
+     * @throws \Http\Client\Exception\NetworkException
+     * @throws \Http\Client\Exception\RequestException
+     */
+    protected function writeBody($socket, RequestInterface $request, array $options)
+    {
+        // @TODO Handle stream_get_filters
+        $filtersApplied   = [];
+
+        if ($request->hasHeader('Transfer-Encoding')) {
+            $encodings = $request->getHeader('Transfer-encoding');
+            $filters   = [];
+
+            foreach ($encodings as $encoding) {
+                if (!isset($this->filterEncodingMapping[$encoding])) {
+                    throw new RequestException(sprintf('Transfer encoding %s is not possible', $encoding), $request);
+                }
+
+                if (!empty($this->filterEncodingMapping[$encoding])) {
+                    $filters[] = $this->filterEncodingMapping[$encoding];
+                }
+            }
+
+            foreach ($filters as $filter) {
+                $filtersApplied[] = stream_filter_prepend($socket, $filter, STREAM_FILTER_READ);
+            }
+        }
+
+        // @TODO Content Transfer Encoding
+        $body = $request->getBody();
+
+        if ($body->isSeekable()) {
+            $body->rewind();
+        }
+
+        while (!$body->eof()) {
+            $buffer = $body->read($options['write_buffer_size']);
+
+            if (false === $this->fwrite($socket, $buffer)) {
+                throw new NetworkException("Cannot write request body error on socket (BROKEN EPIPE)", $request);
+            }
+        }
+
+        foreach ($filtersApplied as $filter) {
+            stream_filter_remove($filter);
         }
     }
 

@@ -8,6 +8,8 @@ use Http\Client\Exception\TransferException;
 use Http\Client\HttpClient;
 use Http\Client\HttpMethods;
 
+use Http\Client\Util\BatchRequest;
+use Http\Socket\Filter\Chunk;
 use Psr\Http\Message\RequestInterface;
 
 use Symfony\Component\OptionsResolver\Options;
@@ -18,6 +20,7 @@ use Zend\Diactoros\Stream;
 class SocketHttpClient implements HttpClient
 {
     use HttpMethods;
+    use BatchRequest;
     use RequestWriter;
     use ResponseReader;
 
@@ -27,12 +30,15 @@ class SocketHttpClient implements HttpClient
         'stream_context_options' => array(),
         'stream_context_param'   => array(),
         'ssl'                    => false,
+        'write_buffer_size'      => 8192,
         'ssl_method'             => STREAM_CRYPTO_METHOD_TLS_CLIENT
     ];
 
     public function __construct(array $config = [])
     {
         $this->config = $this->configure($config);
+
+        stream_filter_register('chunk', Chunk::class);
     }
 
     /**
@@ -64,6 +70,8 @@ class SocketHttpClient implements HttpClient
         $socket = $this->createSocket($request, $options);
 
         try {
+            $request = $this->sanitizeRequest($request, $options);
+
             $this->writeRequest($socket, $request, $options);
             $response = $this->readResponse($socket, $options);
         } catch (\Exception $e) {
@@ -73,29 +81,6 @@ class SocketHttpClient implements HttpClient
         }
 
         return $response;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function sendRequests(array $requests, array $options = [])
-    {
-        $responses = [];
-        $exceptions = [];
-
-        foreach ($requests as $request) {
-            try {
-                $responses[] = $this->sendRequest($request, $options);
-            } catch (TransferException $e) {
-                $exceptions[] = $e;
-            }
-        }
-
-        if (count($exceptions) > 0) {
-            throw new BatchException($exceptions);
-        }
-
-        return $responses;
     }
 
     /**
