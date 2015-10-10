@@ -2,12 +2,15 @@
     "name": "php-http/socket-adapter",
     "description": "Socket Adapter for PHP-HTTP",
     "require": {
-        "php-http/adapter": "dev-terminology",
-        "zendframework/zend-diactoros": "^1.1",
-        "symfony/options-resolver": "^2.7"
+        "symfony/options-resolver": "^2.7",
+        "php-http/httplug": "dev-master",
+        "php-http/message-factory": "^0.1.0",
+        "php-http/discovery": "^0.1.1"
     },
     "require-dev": {
-        "phpunit/phpunit": "^4.8"
+        "phpunit/phpunit": "^4.8",
+        "zendframework/zend-diactoros": "^1.1",
+        "guzzlehttp/psr7": "^1.2"
     },
     "autoload": {
         "psr-4": {

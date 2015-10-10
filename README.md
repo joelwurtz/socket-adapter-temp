@@ -14,14 +14,14 @@ The socket adapter use the stream extension from PHP which is integrated into th
 
  * Gzip / Compress Transfer Encoding
  
-## Options
+## Configuration for the client
 
  * remote_socket: Specify the remote socket where the library should send the request to
  
  Can be a tcp remote : tcp://hostname:port
  Can be a unix remote : unix://hostname:port
  
- Do not use tls / ssl scheme are this are handle by the ssl option
+ Do not use a tls / ssl scheme, this is handle by the ssl option
  
  * timeout : Timeout for writing request or reading response on the remote
  * ssl : Activate or Desactive the ssl / tls encryption
@@ -41,5 +41,5 @@ The socket adapter use the stream extension from PHP which is integrated into th
  ```
 
  * stream_context_params : Custom parameters for the context of the stream
- * write_buffer_size : When sending the request we need to bufferize the body, this option specify the size of this buffer
- 
+ * write_buffer_size : When sending the request we need to bufferize the body, this option specify the size of this buffer, default is 8192,
+ if you are sending big file with your client it may be interesting to have a bigger value in order to increase performance.

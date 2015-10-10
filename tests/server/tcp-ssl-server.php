@@ -6,7 +6,7 @@ $context      = stream_context_create([
     ]
 ]);
 
-$socketServer = stream_socket_server('tcp://127.0.0.1:9999', $errNo, $errStr, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $context);
+$socketServer = stream_socket_server('tcp://127.0.0.1:19999', $errNo, $errStr, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $context);
 stream_socket_enable_crypto($socketServer, false);
 
 $client       = stream_socket_accept($socketServer);

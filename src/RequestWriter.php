@@ -21,62 +21,22 @@ trait RequestWriter
     ];
 
     /**
-     * Sanitize header of request to make them consistent
-     *
-     * @param RequestInterface $request
-     * @param array $options
-     *
-     * @throws \Http\Client\Exception\RequestException
-     *
-     * @return RequestInterface
-     */
-    protected function sanitizeRequest(RequestInterface $request, array $options)
-    {
-        // Deal with body length / chunked
-        if ($request->getBody()->getSize() != null) {
-            $request = $request->withHeader('Content-Length', $request->getBody()->getSize());
-        }
-
-        if (!$request->getBody()->isReadable()) {
-            $request = $request->withHeader('Content-Length', 0);
-        }
-
-        if (!$request->hasHeader('Content-Length')) {
-            if ($request->getProtocolVersion() == '1.0') {
-                throw new RequestException('HTTP 1.0 Need to have a content length header for sending body, and no size can be found for the body', $request);
-            }
-
-            $values = ["chunked"];
-
-            if ($request->hasHeader('Transfer-encoding')) {
-                $values = array_merge($values, $request->getHeader('Transfer-encoding'));
-                $values = array_map('strtolower', $values);
-                $values = array_unique($values);
-            }
-
-            $request = $request->withHeader('Transfer-encoding', $values);
-        }
-
-        return $request;
-    }
-
-    /**
      * Write a request to a socket
      *
      * @param resource         $socket
      * @param RequestInterface $request
-     * @param array            $options
+     * @param integer          $bufferSize
      *
      * @throws \Http\Client\Exception\NetworkException
      */
-    protected function writeRequest($socket, RequestInterface $request, array $options)
+    protected function writeRequest($socket, RequestInterface $request, $bufferSize = 8192)
     {
         if (false === $this->fwrite($socket, $this->transformRequestHeadersToString($request))) {
             throw new NetworkException("Failed to send request, underlying socket not accessible, (BROKEN EPIPE)", $request);
         }
 
         if ($request->getBody()->isReadable()) {
-            $this->writeBody($socket, $request, $options);
+            $this->writeBody($socket, $request, $bufferSize);
 
             if (false === $this->fwrite($socket, $request->getBody()->getContents())) {
                 throw new NetworkException("Failed to send body of the request, underlying socket not accessible, (BROKEN EPIPE)", $request);
@@ -89,12 +49,12 @@ trait RequestWriter
      *
      * @param resource         $socket
      * @param RequestInterface $request
-     * @param array            $options
+     * @param integer          $bufferSize
      *
      * @throws \Http\Client\Exception\NetworkException
      * @throws \Http\Client\Exception\RequestException
      */
-    protected function writeBody($socket, RequestInterface $request, array $options)
+    protected function writeBody($socket, RequestInterface $request, $bufferSize = 8192)
     {
         // @TODO Handle stream_get_filters
         $filtersApplied   = [];
@@ -126,7 +86,7 @@ trait RequestWriter
         }
 
         while (!$body->eof()) {
-            $buffer = $body->read($options['write_buffer_size']);
+            $buffer = $body->read($bufferSize);
 
             if (false === $this->fwrite($socket, $buffer)) {
                 throw new NetworkException("Cannot write request body error on socket (BROKEN EPIPE)", $request);
@@ -212,4 +172,3 @@ trait RequestWriter
         return false;
     }
 }
- 

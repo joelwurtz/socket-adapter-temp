@@ -7,21 +7,11 @@ use Psr\Http\Message\ResponseInterface;
 
 class SocketHttpClientTest extends BaseTestCase
 {
-    /**
-     * @var SocketHttpClient
-     */
-    protected $client;
-
-    public function setUp()
-    {
-        $this->client = new SocketHttpClient();
-    }
-
     public function testTcpSocketDomain()
     {
         $this->startServer('tcp-server');
-
-        $response = $this->client->get('/', [], ['socket-adapter' => ['remote_socket' => '127.0.0.1:9999']]);
+        $client   = new SocketHttpClient(['remote_socket' => '127.0.0.1:19999']);
+        $response = $client->get('/', []);
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals(200, $response->getStatusCode());
@@ -31,9 +21,10 @@ class SocketHttpClientTest extends BaseTestCase
     {
         $this->startServer('unix-domain-server');
 
-        $response = $this->client->get('/', [], ['socket-adapter' => [
+        $client   = new SocketHttpClient([
             'remote_socket' => 'unix://'.__DIR__.'/server/server.sock'
-        ]]);
+        ]);
+        $response = $client->get('/', []);
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals(200, $response->getStatusCode());
@@ -44,15 +35,16 @@ class SocketHttpClientTest extends BaseTestCase
      */
     public function testNetworkExceptionOnConnectError()
     {
-        $this->client->get('/', [], ['socket-adapter' => ['remote_socket' => '127.0.0.1:9999']]);
+        $client   = new SocketHttpClient(['remote_socket' => '127.0.0.1:19999']);
+        $client->get('/', []);
     }
 
     public function testSslConnection()
     {
         $this->startServer('tcp-ssl-server');
 
-        $response = $this->client->get('/', [], ['socket-adapter' => [
-            'remote_socket' => '127.0.0.1:9999',
+        $client   = new SocketHttpClient([
+            'remote_socket' => '127.0.0.1:19999',
             'ssl'           => true,
             'stream_context_options' => [
                 'ssl' => [
@@ -60,7 +52,8 @@ class SocketHttpClientTest extends BaseTestCase
                     'cafile' => __DIR__ . '/server/ssl/ca.pem'
                 ]
             ]
-        ]]);
+        ]);
+        $response = $client->get('/', []);
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals(200, $response->getStatusCode());
@@ -68,10 +61,14 @@ class SocketHttpClientTest extends BaseTestCase
 
     public function testSslConnectionWithClientCertificate()
     {
+        if (version_compare(PHP_VERSION, '5.6', '<')) {
+            $this->markTestSkipped('Test can only run on php 5.6 and superior (for capturing peer certificate)');
+        }
+
         $this->startServer('tcp-ssl-server-client');
 
-        $response = $this->client->get('/', [], ['socket-adapter' => [
-            'remote_socket' => '127.0.0.1:9999',
+        $client   = new SocketHttpClient([
+            'remote_socket' => '127.0.0.1:19999',
             'ssl'           => true,
             'stream_context_options' => [
                 'ssl' => [
@@ -80,7 +77,8 @@ class SocketHttpClientTest extends BaseTestCase
                     'local_cert' => __DIR__ . '/server/ssl/client-and-key.pem'
                 ]
             ]
-        ]]);
+        ]);
+        $response = $client->get('/', []);
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals(200, $response->getStatusCode());
@@ -88,10 +86,14 @@ class SocketHttpClientTest extends BaseTestCase
 
     public function testInvalidSslConnectionWithClientCertificate()
     {
+        if (version_compare(PHP_VERSION, '5.6', '<')) {
+            $this->markTestSkipped('Test can only run on php 5.6 and superior (for capturing peer certificate)');
+        }
+
         $this->startServer('tcp-ssl-server-client');
 
-        $response = $this->client->get('/', [], ['socket-adapter' => [
-            'remote_socket' => '127.0.0.1:9999',
+        $client   = new SocketHttpClient([
+            'remote_socket' => '127.0.0.1:19999',
             'ssl'           => true,
             'stream_context_options' => [
                 'ssl' => [
@@ -99,7 +101,8 @@ class SocketHttpClientTest extends BaseTestCase
                     'cafile'     => __DIR__ . '/server/ssl/ca.pem'
                 ]
             ]
-        ]]);
+        ]);
+        $response = $client->get('/', []);
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals(403, $response->getStatusCode());
@@ -111,6 +114,8 @@ class SocketHttpClientTest extends BaseTestCase
     public function testNetworkExceptionOnSslError()
     {
         $this->startServer('tcp-server');
-        $this->client->get('/', [], ['socket-adapter' => ['remote_socket' => '127.0.0.1:9999', 'ssl' => true]]);
+
+        $client   = new SocketHttpClient(['remote_socket' => '127.0.0.1:19999', 'ssl' => true]);
+        $client->get('/', []);
     }
 }

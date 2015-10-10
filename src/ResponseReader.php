@@ -2,23 +2,29 @@
 
 namespace Http\Socket;
 
+use Http\Message\MessageFactory;
 use Psr\Http\Message\ResponseInterface;
-use Zend\Diactoros\Response;
-use Zend\Diactoros\Stream;
 
 trait ResponseReader
 {
     /**
+     * @var MessageFactory
+     */
+    protected $messageFactory;
+
+    /**
      * Read a response from a socket
      *
      * @param resource $socket
-     * @param array    $options
      *
      * @return ResponseInterface
      */
-    protected function readResponse($socket, array $options = array())
+    protected function readResponse($socket)
     {
-        $headers = [];
+        $headers  = [];
+        $reason   = null;
+        $status   = null;
+        $protocol = null;
 
         while (($line = fgets($socket)) !== false) {
             if (rtrim($line) === '') {
@@ -33,10 +39,11 @@ trait ResponseReader
             return null;
         }
 
-        $options = ['protocol_version' => substr($parts[0], -3)];
+        $protocol = substr($parts[0], -3);
+        $status   = $parts[1];
 
         if (isset($parts[2])) {
-            $options['reason_phrase'] = $parts[2];
+            $reason = $parts[2];
         }
 
         // Set the size on the stream if it was returned in the response
@@ -49,7 +56,6 @@ trait ResponseReader
                 : '';
         }
 
-        return new Response(new Stream($socket), $parts[1], $responseHeaders);
+        return $this->messageFactory->createResponse($status, $reason, $protocol, $headers, $socket);
     }
 }
- 

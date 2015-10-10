@@ -2,27 +2,28 @@
 
 namespace Http\Socket;
 
-use Http\Client\Exception\BatchException;
 use Http\Client\Exception\NetworkException;
-use Http\Client\Exception\TransferException;
 use Http\Client\HttpClient;
 use Http\Client\HttpMethods;
-
 use Http\Client\Util\BatchRequest;
+use Http\Discovery\MessageFactoryDiscovery;
+use Http\Message\MessageFactory;
 use Http\Socket\Filter\Chunk;
 use Psr\Http\Message\RequestInterface;
-
 use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Zend\Diactoros\Request;
-use Zend\Diactoros\Stream;
 
 class SocketHttpClient implements HttpClient
 {
-    use HttpMethods;
-    use BatchRequest;
     use RequestWriter;
     use ResponseReader;
+    use HttpMethods;
+    use BatchRequest;
+
+    /**
+     * @var MessageFactory
+     */
+    protected $messageFactory;
 
     private $config = [
         'remote_socket'          => null,
@@ -34,9 +35,10 @@ class SocketHttpClient implements HttpClient
         'ssl_method'             => STREAM_CRYPTO_METHOD_TLS_CLIENT
     ];
 
-    public function __construct(array $config = [])
+    public function __construct(array $config = [], MessageFactory $messageFactory = null)
     {
         $this->config = $this->configure($config);
+        $this->messageFactory = null === $messageFactory ? MessageFactoryDiscovery::find() : $messageFactory;
 
         stream_filter_register('chunk', Chunk::class);
     }
@@ -44,36 +46,27 @@ class SocketHttpClient implements HttpClient
     /**
      * {@inheritdoc}
      */
-    public function send($method, $uri, array $headers = [], $body = null, array $options = [])
+    public function send($method, $uri, array $headers = [], $body = null)
     {
-        if (null === $body) {
-            $body = new Stream('php://memory');
-        }
-
-        // Create request
-        $request = new Request($uri, $method, $body, $headers);
-        // Send request
-        return $this->sendRequest($request, $options);
+        return $this->sendRequest($this->messageFactory->createRequest($method, $uri, '1.1', $headers, $body));
     }
 
     /**
      * {@inheritdoc}
      */
-    public function sendRequest(RequestInterface $request, array $options = [])
+    public function sendRequest(RequestInterface $request)
     {
-        $options = isset($options['socket-adapter']) ? $this->configure($options['socket-adapter']) : $this->config;
+        $remote = $this->config['remote_socket'];
 
-        if ($options['remote_socket'] === null) {
-            $options['remote_socket'] = $this->determineRemoteFromRequest($request);
+        if (null === $remote) {
+            $remote = $this->determineRemoteFromRequest($request);
         }
 
-        $socket = $this->createSocket($request, $options);
+        $socket = $this->createSocket($request, $remote);
 
         try {
-            $request = $this->sanitizeRequest($request, $options);
-
-            $this->writeRequest($socket, $request, $options);
-            $response = $this->readResponse($socket, $options);
+            $this->writeRequest($socket, $request, $this->config['write_buffer_size']);
+            $response = $this->readResponse($socket);
         } catch (\Exception $e) {
             $this->closeSocket($socket);
 
@@ -87,25 +80,25 @@ class SocketHttpClient implements HttpClient
      * Create the socket to write request and read response on it
      *
      * @param RequestInterface $request Request for
-     * @param array            $options Options for creation
+     * @param string           $remote  Entrypoint for the connection
      *
      * @throws NetworkException
      *
      * @return resource
      */
-    protected function createSocket(RequestInterface $request, array $options)
+    protected function createSocket(RequestInterface $request, $remote)
     {
         $errNo  = null;
         $errMsg = null;
 
-        $socket = @stream_socket_client($options['remote_socket'], $errNo, $errMsg, $options['timeout'], STREAM_CLIENT_CONNECT, $options['stream_context']);
+        $socket = @stream_socket_client($remote, $errNo, $errMsg, $this->config['timeout'], STREAM_CLIENT_CONNECT, $this->config['stream_context']);
 
         if (false === $socket) {
             throw new NetworkException($errMsg, $request);
         }
 
-        if ($options['ssl']) {
-            if (false === @stream_socket_enable_crypto($socket, true, $options['ssl_method'])) {
+        if ($this->config['ssl']) {
+            if (false === @stream_socket_enable_crypto($socket, true, $this->config['ssl_method'])) {
                 throw new NetworkException(sprintf('Cannot enable tls: %s', error_get_last()['message']), $request);
             }
         }
@@ -162,4 +155,3 @@ class SocketHttpClient implements HttpClient
         return sprintf('tcp://%s:%s', $request->getUri()->getHost(), $request->getUri()->getPort() ?: 80);
     }
 }
- 
