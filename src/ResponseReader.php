@@ -56,6 +56,28 @@ trait ResponseReader
                 : '';
         }
 
-        return $this->messageFactory->createResponse($status, $reason, $protocol, $responseHeaders, $socket);
+        $response = $this->messageFactory->createResponse($status, $reason, $protocol, $responseHeaders, null);
+        $stream   = $this->createStream($socket, $response);
+
+        return $response->withBody($stream);
+    }
+
+    /**
+     * Create the stream
+     *
+     * @param $socket
+     * @param ResponseInterface $response
+     *
+     * @return Stream
+     */
+    protected function createStream($socket, ResponseInterface $response)
+    {
+        $size = null;
+
+        if ($response->hasHeader('Content-Length')) {
+            $size = (int)$response->getHeaderLine('Content-Length');
+        }
+
+        return new Stream($socket, $size);
     }
 }
