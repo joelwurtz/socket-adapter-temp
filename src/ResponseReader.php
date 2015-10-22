@@ -56,6 +56,6 @@ trait ResponseReader
                 : '';
         }
 
-        return $this->messageFactory->createResponse($status, $reason, $protocol, $headers, $socket);
+        return $this->messageFactory->createResponse($status, $reason, $protocol, $responseHeaders, $socket);
     }
 }

@@ -40,14 +40,6 @@ class SocketHttpClient implements HttpClient
     /**
      * {@inheritdoc}
      */
-    public function send($method, $uri, array $headers = [], $body = null)
-    {
-        return $this->sendRequest($this->messageFactory->createRequest($method, $uri, '1.1', $headers, $body));
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function sendRequest(RequestInterface $request)
     {
         $remote = $this->config['remote_socket'];
