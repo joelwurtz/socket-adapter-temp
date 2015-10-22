@@ -52,7 +52,7 @@ class SocketHttpClient implements HttpClient
 
         try {
             $this->writeRequest($socket, $request, $this->config['write_buffer_size']);
-            $response = $this->readResponse($socket);
+            $response = $this->readResponse($request, $socket);
         } catch (\Exception $e) {
             $this->closeSocket($socket);
 
@@ -114,18 +114,13 @@ class SocketHttpClient implements HttpClient
         });
 
         $resolver->setDefault('timeout', function (Options $options, $previousValue) {
-            if ($previousValue === null) {
-                return ini_get('default_socket_timeout');
-            }
-
-            return $previousValue;
+            return ini_get('default_socket_timeout');
         });
 
         $resolver->setAllowedTypes('stream_context_options', 'array');
         $resolver->setAllowedTypes('stream_context_param', 'array');
         $resolver->setAllowedTypes('stream_context', 'resource');
         $resolver->setAllowedTypes('ssl', ['bool', 'null']);
-
 
         return $resolver->resolve($config);
     }

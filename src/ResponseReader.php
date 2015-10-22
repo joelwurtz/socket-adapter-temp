@@ -2,7 +2,9 @@
 
 namespace Http\Socket;
 
+use Http\Client\Exception\NetworkException;
 use Http\Message\MessageFactory;
+use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
 trait ResponseReader
@@ -15,11 +17,14 @@ trait ResponseReader
     /**
      * Read a response from a socket
      *
-     * @param resource $socket
+     * @param RequestInterface $request
+     * @param resource         $socket
+     *
+     * @throws NetworkException When the response cannot be read
      *
      * @return ResponseInterface
      */
-    protected function readResponse($socket)
+    protected function readResponse(RequestInterface $request, $socket)
     {
         $headers  = [];
         $reason   = null;
@@ -36,7 +41,7 @@ trait ResponseReader
         $parts = explode(' ', array_shift($headers), 3);
 
         if (count($parts) <= 1) {
-            return null;
+            throw new NetworkException('Cannot read the response', $request);
         }
 
         $protocol = substr($parts[0], -3);

@@ -3,7 +3,7 @@
     "description": "Socket Adapter for PHP-HTTP",
     "require": {
         "symfony/options-resolver": "^2.7",
-        "php-http/httplug": "~1.0@dev",
+        "php-http/httplug": "^1.0@dev",
         "php-http/message-factory": "dev-master as 0.1.1",
         "php-http/utils": "dev-master"
     },
@@ -36,6 +36,9 @@
             "email": "jwurtz@jolicode.com"
         }
     ],
+    "provide": {
+        "php-http/client-implementation": "1.0"
+    },
     "scripts": {
         "test": "vendor/bin/phpunit",
         "test-ci": "vendor/bin/phpunit --coverage-clover build/coverage.xml"

@@ -26,6 +26,15 @@ class SocketHttpClientTest extends BaseTestCase
         $this->assertEquals(200, $response->getStatusCode());
     }
 
+    /**
+     * @expectedException \Http\Client\Exception\NetworkException
+     */
+    public function testNoRemote()
+    {
+        $client   = $this->createClient();
+        $client->get('/', []);
+    }
+
     public function testRemoteInUri()
     {
         $this->startServer('tcp-server');
@@ -44,6 +53,16 @@ class SocketHttpClientTest extends BaseTestCase
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals(200, $response->getStatusCode());
+    }
+
+    /**
+     * @expectedException \Http\Client\Exception\NetworkException
+     */
+    public function testBrokenSocket()
+    {
+        $this->startServer('tcp-bugous-server');
+        $client = $this->createClient(['remote_socket' => '127.0.0.1:19999']);
+        $client->get('/', []);
     }
 
     public function testSslRemoteInUri()
