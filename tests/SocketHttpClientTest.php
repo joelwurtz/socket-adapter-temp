@@ -2,16 +2,62 @@
 
 namespace Http\Socket\Tests;
 
+use Http\Client\Utils\HttpMethodsClient;
+use Http\Discovery\MessageFactory\GuzzleFactory;
 use Http\Socket\SocketHttpClient;
 use Psr\Http\Message\ResponseInterface;
 
 class SocketHttpClientTest extends BaseTestCase
 {
+    public function createClient($options = array())
+    {
+        $messageFactory = new GuzzleFactory();
+
+        return new HttpMethodsClient(new SocketHttpClient($messageFactory, $options), $messageFactory);
+    }
+
     public function testTcpSocketDomain()
     {
         $this->startServer('tcp-server');
-        $client   = new SocketHttpClient(['remote_socket' => '127.0.0.1:19999']);
+        $client   = $this->createClient(['remote_socket' => '127.0.0.1:19999']);
         $response = $client->get('/', []);
+
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+        $this->assertEquals(200, $response->getStatusCode());
+    }
+
+    public function testRemoteInUri()
+    {
+        $this->startServer('tcp-server');
+        $client   = $this->createClient();
+        $response = $client->get('http://127.0.0.1:19999/', []);
+
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+        $this->assertEquals(200, $response->getStatusCode());
+    }
+
+    public function testRemoteInHostHeader()
+    {
+        $this->startServer('tcp-server');
+        $client   = $this->createClient();
+        $response = $client->get('/', ['Host' => '127.0.0.1:19999']);
+
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+        $this->assertEquals(200, $response->getStatusCode());
+    }
+
+    public function testSslRemoteInUri()
+    {
+        $this->startServer('tcp-ssl-server');
+        $client   = $this->createClient([
+            'stream_context_options' => [
+                'ssl' => [
+                    'peer_name' => 'socket-adapter',
+                    'cafile' => __DIR__ . '/server/ssl/ca.pem'
+                ]
+            ]
+        ]);
+        $response = $client->get('https://127.0.0.1:19999/', []);
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals(200, $response->getStatusCode());
@@ -21,7 +67,7 @@ class SocketHttpClientTest extends BaseTestCase
     {
         $this->startServer('unix-domain-server');
 
-        $client   = new SocketHttpClient([
+        $client   = $this->createClient([
             'remote_socket' => 'unix://'.__DIR__.'/server/server.sock'
         ]);
         $response = $client->get('/', []);
@@ -35,7 +81,7 @@ class SocketHttpClientTest extends BaseTestCase
      */
     public function testNetworkExceptionOnConnectError()
     {
-        $client   = new SocketHttpClient(['remote_socket' => '127.0.0.1:19999']);
+        $client   = $this->createClient(['remote_socket' => '127.0.0.1:19999']);
         $client->get('/', []);
     }
 
@@ -43,7 +89,7 @@ class SocketHttpClientTest extends BaseTestCase
     {
         $this->startServer('tcp-ssl-server');
 
-        $client   = new SocketHttpClient([
+        $client   = $this->createClient([
             'remote_socket' => '127.0.0.1:19999',
             'ssl'           => true,
             'stream_context_options' => [
@@ -67,7 +113,7 @@ class SocketHttpClientTest extends BaseTestCase
 
         $this->startServer('tcp-ssl-server-client');
 
-        $client   = new SocketHttpClient([
+        $client   = $this->createClient([
             'remote_socket' => '127.0.0.1:19999',
             'ssl'           => true,
             'stream_context_options' => [
@@ -92,7 +138,7 @@ class SocketHttpClientTest extends BaseTestCase
 
         $this->startServer('tcp-ssl-server-client');
 
-        $client   = new SocketHttpClient([
+        $client   = $this->createClient([
             'remote_socket' => '127.0.0.1:19999',
             'ssl'           => true,
             'stream_context_options' => [
@@ -115,7 +161,7 @@ class SocketHttpClientTest extends BaseTestCase
     {
         $this->startServer('tcp-server');
 
-        $client   = new SocketHttpClient(['remote_socket' => '127.0.0.1:19999', 'ssl' => true]);
+        $client   = $this->createClient(['remote_socket' => '127.0.0.1:19999', 'ssl' => true]);
         $client->get('/', []);
     }
 }

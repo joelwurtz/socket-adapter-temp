@@ -11,7 +11,7 @@ class BaseTestCase extends \PHPUnit_Framework_TestCase
         $filename = __DIR__ . '/server/' . $name . '.php';
         $pipes    = [];
         $this->servers[$name] = proc_open('php '. $filename, [], $pipes);
-        sleep(1);
+        usleep(30000);
     }
 
     public function stopServer($name)

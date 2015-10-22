@@ -8,18 +8,6 @@ use Psr\Http\Message\RequestInterface;
 
 trait RequestWriter
 {
-    protected $filterEncodingMapping = [
-        'chunked'  => 'chunk',
-        // No encoding
-        'identity' => '',
-        // LZ77 Compression no support in standard php library
-        'gzip'     => null,
-        // LZW Compression no support in standard php library
-        'compress' => null,
-        // Deflate RFC 1950 Supported by the zlib extension in PHP
-        'deflate'  => 'zlib.deflate'
-    ];
-
     /**
      * Write a request to a socket
      *
@@ -37,10 +25,6 @@ trait RequestWriter
 
         if ($request->getBody()->isReadable()) {
             $this->writeBody($socket, $request, $bufferSize);
-
-            if (false === $this->fwrite($socket, $request->getBody()->getContents())) {
-                throw new NetworkException("Failed to send body of the request, underlying socket not accessible, (BROKEN EPIPE)", $request);
-            }
         }
     }
 
@@ -56,29 +40,6 @@ trait RequestWriter
      */
     protected function writeBody($socket, RequestInterface $request, $bufferSize = 8192)
     {
-        // @TODO Handle stream_get_filters
-        $filtersApplied   = [];
-
-        if ($request->hasHeader('Transfer-Encoding')) {
-            $encodings = $request->getHeader('Transfer-encoding');
-            $filters   = [];
-
-            foreach ($encodings as $encoding) {
-                if (!isset($this->filterEncodingMapping[$encoding])) {
-                    throw new RequestException(sprintf('Transfer encoding %s is not possible', $encoding), $request);
-                }
-
-                if (!empty($this->filterEncodingMapping[$encoding])) {
-                    $filters[] = $this->filterEncodingMapping[$encoding];
-                }
-            }
-
-            foreach ($filters as $filter) {
-                $filtersApplied[] = stream_filter_prepend($socket, $filter, STREAM_FILTER_READ);
-            }
-        }
-
-        // @TODO Content Transfer Encoding
         $body = $request->getBody();
 
         if ($body->isSeekable()) {
@@ -89,12 +50,8 @@ trait RequestWriter
             $buffer = $body->read($bufferSize);
 
             if (false === $this->fwrite($socket, $buffer)) {
-                throw new NetworkException("Cannot write request body error on socket (BROKEN EPIPE)", $request);
+                throw new NetworkException("An error occur when writing request to client (BROKEN EPIPE)", $request);
             }
-        }
-
-        foreach ($filtersApplied as $filter) {
-            stream_filter_remove($filter);
         }
     }
 

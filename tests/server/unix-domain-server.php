@@ -1,5 +1,9 @@
 <?php
 
+if (file_exists(__DIR__.'/server.sock')) {
+    unlink(__DIR__.'/server.sock');
+}
+
 $socketServer = stream_socket_server('unix://'.__DIR__.'/server.sock');
 $client       = stream_socket_accept($socketServer);
 

@@ -3,14 +3,14 @@
     "description": "Socket Adapter for PHP-HTTP",
     "require": {
         "symfony/options-resolver": "^2.7",
-        "php-http/httplug": "dev-master",
-        "php-http/message-factory": "^0.1.0",
-        "php-http/discovery": "^0.1.1"
+        "php-http/httplug": "dev-master as dev-utility_separation",
+        "php-http/message-factory": "dev-master as 0.1.1",
+        "php-http/utils": "dev-master"
     },
     "require-dev": {
         "phpunit/phpunit": "^4.8",
-        "zendframework/zend-diactoros": "^1.1",
-        "guzzlehttp/psr7": "^1.2"
+        "guzzlehttp/psr7": "^1.2",
+        "php-http/discovery": "dev-master"
     },
     "autoload": {
         "psr-4": {
@@ -18,6 +18,12 @@
             "Http\\Socket\\Tests\\": "tests/"
         }
     },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/php-http/utils"
+        }
+    ],
     "license": "MIT",
     "authors": [
         {
