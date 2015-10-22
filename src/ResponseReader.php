@@ -7,6 +7,13 @@ use Http\Message\MessageFactory;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
+/**
+ * Method for reading response
+ *
+ * Mainly used by SocketHttpClient
+ *
+ * @author Joel Wurtz <joel.wurtz@gmail.com>
+ */
 trait ResponseReader
 {
     /**

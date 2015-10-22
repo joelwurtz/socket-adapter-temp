@@ -4,14 +4,40 @@ namespace Http\Socket;
 
 use Psr\Http\Message\StreamInterface;
 
+/**
+ * Stream implementation for Socket Client
+ *
+ * This implementation is used to have a Stream which react better to the Socket Client behavior.
+ *
+ * The main advantage is you can get the response of a request even if it's not finish, the response is availabe
+ * as soon as all headers are received, this stream will have the remaining socket used for the request / response
+ * call.
+ *
+ * It is only readable once, so if you want to read the content multiple time you can store contents of this
+ * stream into a variable or encapsulate it in a buffered stream.
+ *
+ * Writing and Seek is disable to avoid weird behaviors.
+ *
+ * @author Joel Wurtz <joel.wurtz@gmail.com>
+ */
 class Stream implements StreamInterface
 {
+    /** @var resource Underlying socket */
     private $socket;
 
+    /**
+     * @var bool Is stream detached
+     */
     private $isDetached = false;
 
+    /**
+     * @var int|null Size of the stream, so we know what we must read, null if not available (i.e. a chunked stream)
+     */
     private $size;
 
+    /**
+     * @var int Size of the stream readed, to avoid reading more than available and have the user blocked
+     */
     private $readed = 0;
 
     /**
@@ -48,6 +74,8 @@ class Stream implements StreamInterface
     public function detach()
     {
         $this->isDetached = true;
+        $socket = $this->socket;
+        $this->socket = null;
 
         return $this->socket;
     }
@@ -170,4 +198,3 @@ class Stream implements StreamInterface
         return $meta[$key];
     }
 }
- 

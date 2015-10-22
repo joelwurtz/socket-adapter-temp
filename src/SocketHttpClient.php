@@ -10,6 +10,13 @@ use Psr\Http\Message\RequestInterface;
 use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
+/**
+ * Socket Http Client
+ *
+ * Use stream and socket capabilities of the core of PHP to send HTTP requests
+ *
+ * @author Joel Wurtz <joel.wurtz@gmail.com>
+ */
 class SocketHttpClient implements HttpClient
 {
     use RequestWriter;
@@ -26,6 +33,10 @@ class SocketHttpClient implements HttpClient
         'ssl_method'             => STREAM_CRYPTO_METHOD_TLS_CLIENT
     ];
 
+    /**
+     * @param MessageFactory $messageFactory
+     * @param array          $config
+     */
     public function __construct(MessageFactory $messageFactory, array $config = [])
     {
         $this->messageFactory = $messageFactory;
@@ -93,6 +104,11 @@ class SocketHttpClient implements HttpClient
         return $socket;
     }
 
+    /**
+     * Close the socket, used when having an error
+     *
+     * @param resource $socket
+     */
     protected function closeSocket($socket)
     {
         fclose($socket);

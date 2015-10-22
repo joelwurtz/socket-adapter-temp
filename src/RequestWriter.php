@@ -3,9 +3,15 @@
 namespace Http\Socket;
 
 use Http\Client\Exception\NetworkException;
-use Http\Client\Exception\RequestException;
 use Psr\Http\Message\RequestInterface;
 
+/**
+ * Method for writing request
+ *
+ * Mainly used by SocketHttpClient
+ *
+ * @author Joel Wurtz <joel.wurtz@gmail.com>
+ */
 trait RequestWriter
 {
     /**
