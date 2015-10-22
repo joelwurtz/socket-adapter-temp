@@ -16,11 +16,6 @@ class SocketHttpClient implements HttpClient
     use ResponseReader;
     use BatchRequest;
 
-    /**
-     * @var MessageFactory
-     */
-    protected $messageFactory;
-
     private $config = [
         'remote_socket'          => null,
         'timeout'                => null,
